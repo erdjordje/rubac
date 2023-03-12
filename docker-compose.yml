@@ -1,0 +1,9 @@
+version: "3.9"
+
+services:
+  rubac:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    volumes:
+      - .:/var/www/html
