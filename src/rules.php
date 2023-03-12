@@ -1,18 +1,20 @@
 <?php
 
-function ip_range(string $ipAddress, string $range): bool
-{
-    list ($net, $mask) = explode('/', $range);
+if (!function_exists('ip_range')) {
+    function ip_range(string $ipAddress, string $cidr): bool
+    {
+        list ($ip, $mask) = explode('/', $cidr);
 
-    $ip_net = ip2long($net);
-    $ip_mask = ~((1 << (32 - $mask)) - 1);
+        $ip = ip2long($ip);
+        $mask = ~((1 << (32 - $mask)) - 1);
 
-    $ip_ip = ip2long($ipAddress);
-
-    return ($ip_ip & $ip_mask) == ($ip_net & $ip_mask);
+        return (ip2long($ipAddress) & $mask) == ($ip & $mask);
+    }
 }
 
-function in(string $userRole, ...$roles): bool
-{
-    return in_array($userRole, $roles);
+if (!function_exists('in')) {
+    function in(string $userRole, ...$roles): bool
+    {
+        return in_array($userRole, $roles);
+    }
 }

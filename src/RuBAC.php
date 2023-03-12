@@ -2,7 +2,7 @@
 
 namespace RuBAC;
 
-include __DIR__ . '/rules.php';
+require __DIR__ . '/rules.php';
 
 use InvalidArgumentException;
 
@@ -17,25 +17,27 @@ final class RuBAC
 
     public function execute(UserInterface $user, RequestInterface $request): bool
     {
-        if (!$this->isWorkflowPath($request->getPath())) {
+        if (!$this->isPathRestricted($request->getPath())) {
             return true;
         }
 
         return $this->checkRules($user, $request);
     }
 
-    private function isWorkflowPath(string $path): bool
+    private function isPathRestricted(string $path): bool
     {
         return fnmatch($this->workflow['Path'], $path);
     }
 
     private function setWorkflow(string $workflow): void
     {
-        $this->workflow = json_decode($workflow, true);
+        $workflow = json_decode($workflow, true);
 
-        if (empty($this->workflow)) {
-            throw new InvalidArgumentException('Workflow must be JSON');
+        if (empty($workflow)) {
+            throw new InvalidArgumentException('Workflow must be JSON.');
         }
+
+        $this->workflow = $workflow;
     }
 
     private function checkRules(UserInterface $user, RequestInterface $request): bool

@@ -1,5 +1,6 @@
 <?php
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\Exception;
 use PHPUnit\Framework\TestCase;
 use RuBAC\RequestInterface;
@@ -9,6 +10,22 @@ use SebastianBergmann\Template\RuntimeException;
 
 class RuBACTest extends TestCase
 {
+    private array $workflows;
+
+    public function setUp(): void
+    {
+        parent::setUp();
+
+        $this->setWorkflows();
+    }
+
+    private function setWorkflows()
+    {
+        $this->workflows = array_map(function (string $workflow) {
+            return file_get_contents(__DIR__ . "/../workflows/$workflow.json");
+        }, ['workflow1', 'workflow2']);
+    }
+
     private function createUserStub(string $userRole): UserInterface
     {
         try {
@@ -40,87 +57,54 @@ class RuBACTest extends TestCase
         return $request;
     }
 
-    /**
-     * @dataProvider workflow1Provider
-     */
-    public function testExecuteWorkflow1(UserInterface $user, RequestInterface $request, bool $expected)
+    #[DataProvider('workflow1Provider')]
+    public function testExecuteWorkflow1(string $role, string $ipAddress, string $path, bool $expected)
     {
-        $workflow = file_get_contents(__DIR__ . '/../workflows/workflow1.json');
-        $service = new RuBAC($workflow);
+        $user = $this->createUserStub($role);
+        $request = $this->createRequestStub($ipAddress, $path);
+
+        $service = new RuBAC($this->workflows[0]);
 
         $this->assertEquals($expected, $service->execute($user, $request));
     }
 
-    public function workflow1Provider(): array
+    public static function workflow1Provider(): array
     {
         return [
-            [
-                $this->createUserStub('ADMIN'),
-                $this->createRequestStub('100.100.100.100', '/admin/settings'),
-                true
-            ],
-            [
-                $this->createUserStub('SUPER_ADMIN'),
-                $this->createRequestStub('100.100.100.100', '/admin/settings'),
-                false
-            ],
-            [
-                $this->createUserStub('ADMIN'),
-                $this->createRequestStub('100.100.100.98', '/admin/settings'),
-                false
-            ],
-            [
-                $this->createUserStub('ROLE123'),
-                $this->createRequestStub('100.100.100.98', '/users'),
-                true
-            ],
-            [
-                $this->createUserStub('ADMIN'),
-                $this->createRequestStub('100.100.100.100', '/admin/users'),
-                true
-            ],
+            'admin has access to settings' => ['ADMIN', '100.100.100.100', '/admin/settings', true],
+            'super admin can not access' => ['SUPER_ADMIN', '100.100.100.100', '/admin/settings', false],
+            'wrong IP request' => ['ADMIN', '100.100.100.98', '/admin/settings', false],
+            'role123 can access to resource' => ['ROLE123', '100.100.100.98', '/users', true],
+            'admin has access to users' => ['ADMIN', '100.100.100.100', '/admin/users', true],
         ];
     }
 
-    /**
-     * @dataProvider workflow2Provider
-     */
-    public function testExecuteWorkflow2(UserInterface $user, RequestInterface $request, bool $expected)
+    #[DataProvider('workflow2Provider')]
+    public function testExecuteWorkflow2(string $role, string $ipAddress, string $path, bool $expected)
     {
-        $workflow = file_get_contents(__DIR__ . '/../workflows/workflow2.json');
-        $service = new RuBAC($workflow);
+        $user = $this->createUserStub($role);
+        $request = $this->createRequestStub($ipAddress, $path);
+
+        $service = new RuBAC($this->workflows[1]);
 
         $this->assertEquals($expected, $service->execute($user, $request));
     }
 
-    public function workflow2Provider(): array
+    public static function workflow2Provider(): array
     {
         return [
-            [
-                $this->createUserStub('ADMIN'),
-                $this->createRequestStub('100.100.100.14', '/admin/settings'),
-                true
-            ],
-            [
-                $this->createUserStub('SUPER_ADMIN'),
-                $this->createRequestStub('100.100.100.12', '/admin/settings'),
-                true
-            ],
-            [
-                $this->createUserStub('ADMIN'),
-                $this->createRequestStub('100.100.100.98', '/admin/settings'),
-                false
-            ],
-            [
-                $this->createUserStub('ROLE123'),
-                $this->createRequestStub('100.100.100.14', '/admin/users'),
-                false
-            ],
-            [
-                $this->createUserStub('ADMIN'),
-                $this->createRequestStub('100.100.100.100', '/admin/users'),
-                false
-            ],
+            'admin has access' => ['ADMIN', '100.100.100.14', '/admin/settings', true],
+            'super admin has access' => ['SUPER_ADMIN', '100.100.100.12', '/admin/settings', true],
+            'wrong IP request' => ['ADMIN', '100.100.100.98', '/admin/settings', false],
+            'role123 can not access to resource' => ['ROLE123', '100.100.100.14', '/admin/users', false],
+            'role123 can access to resource' => ['ROLE123', '100.100.100.100', '/games', true],
         ];
+    }
+
+    public function testInvalidWorkflow()
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new RuBAC('{test123}');
     }
 }
