@@ -2,6 +2,8 @@
 
 namespace RuBAC;
 
+include __DIR__ . '/rules.php';
+
 use InvalidArgumentException;
 
 final class RuBAC

@@ -51,10 +51,6 @@ class RuBACTest extends TestCase
         $this->assertEquals($expected, $service->execute($user, $request));
     }
 
-    public function testExecuteWorkflow2()
-    {
-    }
-
     public function workflow1Provider(): array
     {
         return [
@@ -74,7 +70,7 @@ class RuBACTest extends TestCase
                 false
             ],
             [
-                $this->createUserStub('ADMIN'),
+                $this->createUserStub('ROLE123'),
                 $this->createRequestStub('100.100.100.98', '/users'),
                 true
             ],
@@ -82,6 +78,48 @@ class RuBACTest extends TestCase
                 $this->createUserStub('ADMIN'),
                 $this->createRequestStub('100.100.100.100', '/admin/users'),
                 true
+            ],
+        ];
+    }
+
+    /**
+     * @dataProvider workflow2Provider
+     */
+    public function testExecuteWorkflow2(UserInterface $user, RequestInterface $request, bool $expected)
+    {
+        $workflow = file_get_contents(__DIR__ . '/../workflows/workflow2.json');
+        $service = new RuBAC($workflow);
+
+        $this->assertEquals($expected, $service->execute($user, $request));
+    }
+
+    public function workflow2Provider(): array
+    {
+        return [
+            [
+                $this->createUserStub('ADMIN'),
+                $this->createRequestStub('100.100.100.14', '/admin/settings'),
+                true
+            ],
+            [
+                $this->createUserStub('SUPER_ADMIN'),
+                $this->createRequestStub('100.100.100.12', '/admin/settings'),
+                true
+            ],
+            [
+                $this->createUserStub('ADMIN'),
+                $this->createRequestStub('100.100.100.98', '/admin/settings'),
+                false
+            ],
+            [
+                $this->createUserStub('ROLE123'),
+                $this->createRequestStub('100.100.100.14', '/admin/users'),
+                false
+            ],
+            [
+                $this->createUserStub('ADMIN'),
+                $this->createRequestStub('100.100.100.100', '/admin/users'),
+                false
             ],
         ];
     }
